@@ -15,9 +15,9 @@ class PreProcessBoard(PreProcess):
         PreProcess.__init__(self, pic_name, flags)
 
         cv2.namedWindow(winname=PreProcessBoard.winname, flags=0)
-        cv2.resizeWindow(PreProcessBoard.winname, (500, 800))
+        cv2.resizeWindow(PreProcessBoard.winname, (int(self.img.shape[1]/2), int(self.img.shape[0]/2)))
         cv2.createTrackbar('kernel size', PreProcessBoard.winname, 0, 5, nothing)
-        cv2.createTrackbar('bin thresh', PreProcessBoard.winname, 0, 255, nothing)
+        cv2.createTrackbar('bin thresh', PreProcessBoard.winname, 127, 255, nothing)
 
         while 1:
             s = cv2.getTrackbarPos('kernel size', PreProcessBoard.winname)
