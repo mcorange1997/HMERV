@@ -193,12 +193,12 @@ if __name__ == '__main__':
     # imagePath = sys.argv[1]
     imagePath = 'data/t5.jpg'
     img = cv2.imread(imagePath)
-    detect(img)
+    # detect(img)
     # img = cv2.imread('data/t4.jpg')
-    # img = rotate_bound(img, 25)
-    # cv2.imshow('img', img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    img = rotate_bound(img, -25)
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 '''
