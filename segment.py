@@ -5,6 +5,11 @@ import os
 
 
 def preprocess(img):
+    '''
+    预处理图像
+    :param img:原图
+    :return: 处理后的图片
+    '''
     # 1. 变成灰度图
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
@@ -23,7 +28,7 @@ def preprocess(img):
     dilate1 = cv2.dilate(binary, kernel=k1, iterations=1)
 
     # 5. 一次开运算，断开连接
-    open1 = cv2.morphologyEx(dilate1, op=cv2.MORPH_OPEN, kernel=k2, iterations=3)
+    open1 = cv2.morphologyEx(dilate1, op=cv2.MORPH_OPEN, kernel=k2, iterations=4)
     # close1 = cv2.morphologyEx(open1, op=cv2.MORPH_CLOSE, kernel=k3, iterations=3)
 
     # 6. 再一次膨胀，找到轮廓
@@ -40,6 +45,12 @@ def preprocess(img):
 
 
 def segment(pre, src):
+    '''
+    在原图上圈出分割效果
+    :param pre: 预处理后的图片
+    :param src: 原图片
+    :return: 原图上圈出后的分割结果
+    '''
     _, contours, _ = cv2.findContours(pre, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     for contour in contours:
@@ -51,13 +62,17 @@ def segment(pre, src):
         box = cv2.boxPoints(rect)
         box = np.int0(box)
         print(box)
-
         cv2.drawContours(src, [box], 0,  (0, 0, 255), 3)
 
     return src
 
 
-def stat_col_row(pre):
+def statistics(pre):
+    '''
+    返回预处理后图片的每一行及每一列的灰度值和
+    :param pre: 输入图片
+    :return: 返回的统计信息
+    '''
     stat_col = np.sum(pre, axis=0)
     stat_row = np.sum(pre, axis=1)
     return stat_col, stat_row
@@ -65,13 +80,19 @@ def stat_col_row(pre):
 
 def find_blank(stat, num, thresh):
     '''
-    找出空格
-    stat是列或行统计信息
-    num是判断连续多少小于阈值
+    找出认为是划分点（空白）的地方
+    寻找标准：连续num列或行的灰度值之和大于某一阈值thresh
+    :param stat: 行或列的统计信息
+    :param num: 连续的数量
+    :param thresh: 阈值
+    :return: 集合， 每个间隔的起始和结束坐标（索引）
     '''
+    # reshape输入信息，方便之后访问
     stat = stat.reshape(1, -1)
     print('shape', stat.shape)
+    # 输入统计信息长度
     n = len(stat[0])
+    # 输入统计信息是否超过阈值的TF矩阵
     s = stat < thresh
     print(s)
 
@@ -88,41 +109,40 @@ def find_blank(stat, num, thresh):
             # not s[i]
             finding = False
 
-        if s[0][c1] and s[0][c2] and (not finding) and (c2-c1>=3):
+        if s[0][c1] and s[0][c2] and (not finding) and (c2-c1>=num):
             seg_pos.add((c1, c2))
 
     return seg_pos
 
 
+def SegRem_by_blank(img, pre, num, thresh):
+    statCol, statRow = statistics(pre)
+    col_non0, row_non0 = np.nonzero(statCol), np.nonzero(statRow)
+    c1, cn = col_non0[0][0], col_non0[0][-1]
+    r1, rn = row_non0[0][0], row_non0[0][-1]
+    h = img.shape[0]
+    seg_pos = find_blank(statCol, num, thresh)
+
+    for p in seg_pos:
+        cv2.line(img, ((p[0]+p[1])//2, 0), ((p[0]+p[1])//2, h), (0, 0, 255))
+
+    cropImg, cropPre = img[r1:rn, c1:cn], pre[r1:rn, c1:cn]
+
+    cv2.imshow('img', cropImg)
+    cv2.imshow('pre', cropPre)
+    cv2.waitKey(0)
+
+    cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
-    src = cv2.imread('result/pic1.jpg')
+    src = cv2.imread('result/pic4.jpg')
     pre = preprocess(src)
+    pre = cv2.Canny(src, 100, 200)
     seg = segment(pre, src)
     cv2.imwrite('segment/contour.jpg', seg)
 
-    stat_col, stat_row = stat_col_row(pre)
-    seg_pos = find_blank(stat_col, 6, 12000)
-    print('------------\n', seg_pos)
-
-    h = src.shape[0]
-
-    for point in seg_pos:
-        cv2.line(src, ((point[0]+point[1])//2, 0), ((point[0]+point[1])//2, h), (0, 0, 255))
-
-    cv2.imshow('line', src)
-
-
-    col_non0 = np.nonzero(stat_col)
-    row_non0 = np.nonzero(stat_row)
-    c1, cn = col_non0[0][1], col_non0[0][-1]
-    r1, rn = row_non0[0][1], row_non0[0][-1]
-
-    final = src[r1:rn, c1:cn]
-    cv2.imwrite('segment/final.jpg', final)
-
-    cv2.imshow('img', seg)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    SegRem_by_blank(src, pre, 4, 1000)
 
 
 
