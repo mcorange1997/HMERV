@@ -135,14 +135,65 @@ def SegRem_by_blank(img, pre, num, thresh):
     cv2.destroyAllWindows()
 
 
-if __name__ == '__main__':
-    src = cv2.imread('result/pic4.jpg')
-    pre = preprocess(src)
-    pre = cv2.Canny(src, 100, 200)
-    seg = segment(pre, src)
-    cv2.imwrite('segment/contour.jpg', seg)
+def rotate_bound(image, angle):
+    # 获取宽高
+    (h, w) = image.shape[:2]
+    (cX, cY) = (w // 2, h // 2)
 
-    SegRem_by_blank(src, pre, 4, 1000)
+    # 提取旋转矩阵 sin cos
+    M = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
+    cos = np.abs(M[0, 0])
+    sin = np.abs(M[0, 1])
+
+    return cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+
+
+def detect_angle(src, pre):
+    lines = cv2.HoughLines(pre, 1, np.pi/360, 150)
+    # for line in lines:
+    #     print(line)
+    #     x1, y1, x2, y2 = line[0]
+    #     cv2.line(src, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
+    # 找出最多的倾斜角，作为图片的倾斜角，并以此旋转图片
+    theta, counts = np.unique(lines[:, 0, 1:], return_counts=True)  # 统计所有角度出现的次数
+    rotate_theta = theta[np.argmax(counts)]
+
+    cv2.imshow('before', src)
+    src = rotate_bound(src, 90-rotate_theta/np.pi*180)
+    cv2.imshow('after', src)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    for rho, theta in lines[0]:
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a * rho
+        y0 = b * rho
+        x1 = int(x0 + 1000 * (-b))
+        y1 = int(y0 + 1000 * (a))
+        x2 = int(x0 - 1000 * (-b))
+        y2 = int(y0 - 1000 * (a))
+        cv2.imshow('1', src)
+        cv2.line(src, (x1, y1), (x2, y2), (0, 0, 0), 2)
+        # src = rotate_bound(src, 90-theta/np.pi*180)
+        cv2.imshow('2', src)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    cv2.imwrite('segment/lines.jpg', src)
+
+
+if __name__ == '__main__':
+    src = cv2.imread('result/pic9.jpg')
+    # pre = preprocess(src)
+    pre = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
+    pre = cv2.Canny(src, 100, 200)
+    cv2.imwrite('canny.jpg', pre)
+    detect_angle(src, pre)
+    # seg = segment(pre, src)
+    # cv2.imwrite('segment/contour.jpg', seg)
+    #
+    # SegRem_by_blank(src, pre, 2, 1000)
 
 
 
