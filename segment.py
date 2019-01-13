@@ -63,6 +63,38 @@ def preprocess(img):
     # 4. 先做一次膨胀，找到轮廓
     dilate1 = cv2.dilate(binary, kernel=k2, iterations=1)
 
+    '''
+    ret, labels = cv2.connectedComponents(dilate1, connectivity=8)
+    c1 = (0, 0, 255)
+    c2 = (0, 255, 0)
+    c3 = (255, 0, 0)
+    c4 = (255, 255, 0)
+    c5 = (255, 0, 255)
+    c6 = (0, 255, 255)
+    c = (c1, c2, c3, c4, c5, c6)
+    labeled_img = np.zeros(shape=img.shape, dtype=np.uint8)
+    for i in range(labels.shape[0]):
+        for j in range(labels.shape[1]):
+            if labels[i, j] != 0:
+                labeled_img[i, j, :] = c[labels[i, j]%6]
+                # print(c[labels[i, j]%6])
+                # print(labeled_img[i, j, :])
+
+    showImg('connected', labeled_img)
+    cv2.imwrite('segment/labeled.png', labeled_img)
+    '''
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(dilate1, connectivity=8)
+
+    labeled_img = np.zeros(shape=labels.shape, dtype=np.uint8)
+
+    for i in range(1, num_labels):
+        if stats[i, cv2.CC_STAT_AREA] >= 40:
+            labeled_img[labels == i] = 255
+
+    showImg('conn', labeled_img)
+    cv2.imwrite('segment/labeled_img.png', labeled_img)
+
+
     # 5. 一次开运算，断开连接
     # open1 = cv2.morphologyEx(dilate1, op=cv2.MORPH_OPEN, kernel=k2, iterations=2)
     # close1 = cv2.morphologyEx(open1, op=cv2.MORPH_CLOSE, kernel=k3, iterations=3)
@@ -80,7 +112,6 @@ def preprocess(img):
     cv2.imwrite('segment/erosion1.jpg', erosion1)
     # cv2.imwrite('segment/close1.jpg', close1)
     cv2.imwrite('segment/dilate2.jpg', dilate2)
-
     return dilate2.astype(np.uint8)
 
 
