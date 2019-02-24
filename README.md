@@ -15,7 +15,7 @@ segment image into areas with printed or handwritten content
 
 Second stage:
 ---------------
-1. detect printed(problems) and handwritten(solutions) texts(still need improving)
+1. detect printed(problems) and handwritten(solutions) texts(still needs improving)
 
 2. parse printed texts with pytesseract and recognize the handwritten
 
